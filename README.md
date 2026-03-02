@@ -20,7 +20,10 @@ A bare-metal operating system for the **Raspberry Pi 1 Model B**, written entire
 - **MMU & Virtual Memory** — creates L1 coarse tables and initializes ARMv6 Extended Page Table format (SCTLR.XP enabled) mapping the kernel identity region (0x0+) and 512MB RAM physical translation through higher-half offsets (0x80000000+).
 - **Process Memory Isolation (L2 Tables)** — maps separate 4KB virtual pages per process into L2 coarse tables restricting User mode constraints. The code is mapped at `0x00100000`, heap at `0x00101000`, and stack memory dynamically mapped and shrinking downwards from `0x00200000` (L2[255]). Process mappings track internally and discard upon deletion.
 - **System Calls (SWI dispatcher)** — features a system call handler tracking software interrupt triggers. Handlers preserve exception execution states and process registers returning control safely to user execution loop.
-- **Dynamic User Memory Allocation & Deallocation** — provides processes the ability to ask for additional physical pages mapped seamlessly between the heap and the stack recursively via SWI 2 (`sys_alloc_page`) and reliably drop unused process memory bounds securely returning chunks back to kernel usage pool via SWI 3 (`sys_free_page`). TLB flushes accurately shield against fault states immediately upon dropping references.
+- **Dynamic User Memory Allocation & Deallocation** — provides processes the ability to ask for additional physical pages mapped seamlessly. The allocator features O(1) bump-allocation speed and scales limitlessly by dynamically creating hidden L2 translation tables across contiguous page gaps. Processes selectively return memory via SWI 3 (`sys_free_page`), and completely empty memory tracks autonomously prune their dead configuration descriptors.
+- **Lazy Memory Mapping** — seamlessly intercepts physical access to unused virtual heap boundaries via the kernel's Data Abort Exception handler, instantly and transparently provisioning precisely allocated new memory physical sections invisibly to the executing application.
+
+*(For detailed information on the internal memory management mechanics, please see the [Allocator Documentation](Docs/allocator.md).)*
 
 ## Boot Sequence
 
@@ -97,6 +100,7 @@ Welcome to A6OS!
 [DBG] MMU on
 [DBG] Process allocated
 [DBG] TTBR switched
+Lazy allocated page for process.
 Allocated page for process.
 Freed page for process.
 Process exited, returned to kernel.

@@ -72,6 +72,20 @@ prefetch_handler:
     b halt_sys
 
 data_handler:
+    // Sub LR by 8 to point to the instruction that caused the abort
+    sub lr, lr, #8
+    push {r0-r3, lr}        // Save registers
+
+    // Read DFSR (Data Fault Status Register)
+    mrc p15, 0, r0, c5, c0, 0
+    // Check if it's a translation fault (e.g. status == 0b0101 or 0b0111)
+    and r1, r0, #0xF
+    cmp r1, #5              // Section translation fault
+    beq .lazy_alloc
+    cmp r1, #7              // Page translation fault
+    beq .lazy_alloc
+
+.abort_fatal:
     ldr r0, =msg_data
     bl uart_puts
     
@@ -87,7 +101,35 @@ data_handler:
     ldr r0, =msg_crlf
     bl uart_puts
     
-    b halt_sys
+    pop {r0-r3, lr}
+    b sys_exit              // Terminate the process
+
+.lazy_alloc:
+    // Read DFAR (Data Fault Address Register)
+    mrc p15, 0, r0, c6, c0, 0
+
+    // Validate bounds: must be in [0x00102000, 0x70000000)
+    ldr r1, =0x00102000
+    cmp r0, r1
+    blt .abort_fatal
+
+    ldr r1, =0x70000000
+    cmp r0, r1
+    bge .abort_fatal
+
+    // Check if we hit the stack guard page or stack
+    ldr r1, =0x001FF000
+    cmp r0, r1
+    beq .abort_fatal        // Protect the stack page (already allocated)
+
+    // Call alloc_specific_page(r0 = virtual_address)
+    bl alloc_specific_page
+    cmp r0, #0
+    beq .abort_fatal        // Allocation failed (OOM)
+
+    // Success! Return from exception and retry the instruction
+    pop {r0-r3, lr}
+    movs pc, lr
 
 irq_handler:
     ldr r0, =msg_irq
