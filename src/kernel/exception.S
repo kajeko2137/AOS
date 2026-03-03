@@ -131,6 +131,8 @@ data_handler:
     pop {r0-r3, lr}
     movs pc, lr
 
+
+// This one will periodically fire, enabling the scheduler
 irq_handler:
     ldr r0, =msg_irq
     bl uart_puts
