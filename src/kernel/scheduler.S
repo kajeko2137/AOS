@@ -1,9 +1,11 @@
-.section ".text.scheduler"
-.globl context_switch
+.section ".rodata"
+msg_reschedule: .asciz "[DBG] Reschedule called, halting.\r\n"
 
-context_switch:
-    // Save current process state
-    // We assume that the kernel passes adress of current processes L1 table in r0
-    // and the next process L1 table in r1
-    
-    
+.section ".text.scheduler"
+.globl reschedule
+
+reschedule:
+    ldr r0, =msg_reschedule
+    bl uart_puts
+    b halt
+

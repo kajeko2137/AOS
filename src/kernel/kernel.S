@@ -74,8 +74,16 @@ _start:
     // Enable the MMU with the kernel's L1 table (returned in r0)
     bl enable_mmu
 
+    // --- ARM THE TIMER HERE ---
+    bl init_timer
+    bl enable_interrupts
+
     ldr r0, =dbg1
     bl uart_puts
+
+    // Initialize the scheduler timer and enable interrupts
+    bl init_timer
+    bl enable_interrupts
 
     // Launch process1
     ldr r0, =_process1_start
@@ -155,6 +163,9 @@ launch_process:
     ldr r0, =dbg3
     bl uart_puts
     pop {r4, r5}
+
+    // Drop to user mode
+    msr cpsr_c, #0x10
 
     // Set process stack and jump to entry point
     mov sp, r5

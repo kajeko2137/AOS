@@ -12,7 +12,7 @@
 
 .globl init_timer
 init_timer:
-    push{lr}
+    push {lr}
 
     // Tell interrupt controller to pass Timer 1 through
     ldr r0, =INTC_ENABLE_1
@@ -28,7 +28,6 @@ init_timer:
 
     // Now we write the calculated timestamp (on which the timer needs to throw an interrupt) into the compare register
     ldr r0, =TIMER_C1
-    mov r1, #(1 << 1)
     str r1, [r0]
 
     // There can be a "stale match" so to prevent it, we do the following
@@ -36,7 +35,7 @@ init_timer:
     mov r1, #(1 << 1)
     str r1, [r0]
 
-    pop{pc}
+    pop {pc}
 
 // BEHOLD THE DARK MAGIC INCANTATION TO ENABLE CPU INTERRUPTS!!!
 .globl enable_interrupts

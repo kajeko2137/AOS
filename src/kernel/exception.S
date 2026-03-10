@@ -44,14 +44,15 @@ swi_handler:
     cmp r7, #3
     beq sys_free_page
 
+.swi_return:
     //check if scheduler fired in the meantime 
     ldr r0, =needs_reschedule
     ldr r1, [r0]
-    cmp r0, #1
-    beq context_switch
+    cmp r1, #1
+    beq reschedule
 
     // Success! Return from exception and retry the instruction
-    pop {r0-12, lr}
+    pop {r0-r12, lr}
     movs pc, lr
 
     // Unknown syscall
@@ -64,7 +65,8 @@ swi_handler:
 // Returns: r0 = virtual address of new page (0 if fail)
 sys_alloc_page:
     bl alloc_process_page   // r0 = virtual address (or 0)
-    bx lr
+    str r0, [sp]            // Overwrite the saved r0 on the stack with the result
+    b .swi_return
 
 // sys_free_page — Syscall #3
 // Frees a previously allocated page.
@@ -72,7 +74,7 @@ sys_alloc_page:
 // Returns: r0 = 0 (Success) or -1 (Fail)
 sys_free_page:
     bl free_process_page
-    bx lr
+    b .swi_return
 
 prefetch_handler:
     ldr r0, =msg_prefetch
@@ -139,20 +141,55 @@ data_handler:
     cmp r0, #0
     beq .abort_fatal        // Allocation failed (OOM)
 
-    bx lr
+    // Success! Return from exception and retry the instruction
+    pop {r0-r12, lr}
+    movs pc, lr
 
 // This one will periodically fire, enabling the scheduler
 irq_handler:
     //adjusting lr (this is a BCM2835 quirk)
     sub lr, lr, #4
 
+    
+    push {r0-r12, lr}
+
+    // --- CLEAR TIMER INTERRUPT ---
+    ldr r0, =0x20003000     // TIMER_BASE
+    
+    // 1. Read current time
+    ldr r1, [r0, #0x04]     // TIMER_CLO
+    
+    // 2. Add interval (10ms)
+    ldr r2, =10000          // TIMER_INTERVAL
+    add r1, r1, r2
+    
+    // 3. Set next match time
+    str r1, [r0, #0x10]     // TIMER_C1
+    
+    // 4. Clear the interrupt flag
+    mov r1, #(1 << 1)
+    str r1, [r0, #0x00]     // TIMER_CS
+    // -----------------------------
+    
     //check if we're in kernel mode
-    push{r0-r12, lr}
     mrs r0, spsr
     and r0, r0, #0x1F //we're only interested in bottom 5 bits
     cmp r0, #0x10 // We check if we were in user mode
     bne .resumme_Kernel
-    b context_switch
+    
+    // We were in user mode. We shouldn't execute reschedule from IRQ mode,
+    // and we MUST restore the registers we pushed!
+    // Normally a real scheduler would save the context to a PCB here.
+    // Since our stub just halts, we'll restore registers, switch to SVC, and jump.
+    pop {r0-r12, lr}
+    
+    // Quick hack for the stub: change mode to SVC (0x13) to safely use uart_puts
+    mrs r13, cpsr
+    bic r13, r13, #0x1F
+    orr r13, r13, #0x13
+    msr cpsr_c, r13
+    
+    b reschedule
 
 .resumme_Kernel:
     // telling the kernel to run scheduler after finnishing interrupt
@@ -160,8 +197,8 @@ irq_handler:
     mov r1, #1
     str r1, [r0]
 
-    //give control back to whatever was happening before irq
-    pop{r0-r12, lr}^
+    pop {r0-r12, lr}
+    movs pc, lr
 
 fiq_handler:
     ldr r0, =msg_fiq
