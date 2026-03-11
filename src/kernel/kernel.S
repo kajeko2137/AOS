@@ -74,7 +74,10 @@ _start:
     // Enable the MMU with the kernel's L1 table (returned in r0)
     bl enable_mmu
 
-    // --- ARM THE TIMER HERE ---
+    // Initialize the scheduler's memory structures
+    bl start_TLS
+
+    // Arm the timer
     bl init_timer
     bl enable_interrupts
 
