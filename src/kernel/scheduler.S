@@ -51,8 +51,8 @@ msg_tls_init:   .asciz "[DBG] Tiered Lottery Scheduler Initialized.\r\n"
 .section ".text.scheduler"
 
 // Initialize the TLS memory structures and hardware RNG
-.globl start_TLS
-start_TLS:
+.globl init_TLS
+init_TLS:
     push {lr}
 
     // 1. Map initial pointers to physical buffers

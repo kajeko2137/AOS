@@ -75,7 +75,7 @@ _start:
     bl enable_mmu
 
     // Initialize the scheduler's memory structures
-    bl start_TLS
+    bl init_TLS
 
     // Arm the timer
     bl init_timer
