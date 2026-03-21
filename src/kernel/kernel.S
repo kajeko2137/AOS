@@ -77,19 +77,23 @@ _start:
     // Initialize the scheduler's memory structures
     bl init_TLS
 
-    // Enqueue process1 into Scheduler Tier 0
-    ldr r0, =_process1_start
-    ldr r1, =_process1_end
-    bl alloc_process
+    // Temporarily disable starting process1
+    // ldr r0, =_process1_start
+    // ldr r1, =_process1_end
+    // bl alloc_process
 
     // r0 now holds the Process Control Block (L2 physical handle)
-    ldr r1, =t0
-    ldr r1, [r1]            // r1 = buf0 physical address
-    str r0, [r1, #0]        // buf0[0] = process1 PCB handle
-    
-    ldr r1, =q0_count
-    mov r2, #1
-    str r2, [r1]            // q0_count = 1
+    // ldr r1, =t0
+    // ldr r1, [r1]            // r1 = buf0 physical address
+    // str r0, [r1, #0]        // buf0[0] = process1 PCB handle
+    // 
+    // ldr r1, =q0_count
+    // mov r2, #1
+    // str r2, [r1]            // q0_count = 1
+
+    bl sd_init
+    ldr r0, =sd_init_msg
+    bl uart_puts
 
     // Arm the timer and enable interrupts
     bl init_timer
@@ -180,3 +184,5 @@ welcome_msg:
     .asciz "Welcome to A6OS!\r\n"
 returned_msg:
     .asciz "Process exited, returned to kernel.\r\n"
+sd_init_msg:
+    .asciz "SD Card Initialized.\r\n"
