@@ -57,4 +57,7 @@ A6OS.img: kernel.img bootcode.bin start.elf config.txt
 	@/sbin/parted -s $@ set 1 boot on
 	@/sbin/parted -s $@ set 1 lba on
 	@dd if=$(BUILD_DIR)/boot.img of=$@ bs=1M seek=1 conv=notrunc status=none
+	@echo "[Jarvis] Injecting First Boot flag into Sector 0..."
+	@printf '\x01' | dd of=$@ bs=1 seek=440 count=1 conv=notrunc status=none
+	@echo "[Jarvis] Flag injected at MBR offset 0x01B8."
 	@echo "Successfully generated $@"

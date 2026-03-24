@@ -2,5 +2,6 @@
     "files.associations": {
         "*.s": "arm",
         "*.S": "arm"
-    }
+    },
+    "makefile.configureOnOpen": false
 }

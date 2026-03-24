@@ -91,14 +91,8 @@ _start:
     // ldr r1, =q0_count
     // mov r2, #1
 
-    // sd card init
-    bl sd_init_part1
-    ldr r0, =sd_part1_msg
-    bl uart_puts
-
-    bl sd_host_init
-    ldr r0, =sd_host_msg
-    bl uart_puts
+    // sd card init & boot manager
+    bl boot_manager
 
     //timer init
     bl init_timer
